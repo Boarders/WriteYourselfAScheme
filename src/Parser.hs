@@ -40,22 +40,20 @@ reservedOp op = Tok.reservedOp lexer $ T.unpack op
 
 -- Parsers for Lisp data constructors
 
-(<<) = flip (>>)
-
 parseAtom :: Parser LispVal
 parseAtom = Atom.(T.pack) <$> lexIdentifier
 
 parseText :: Parser LispVal
 parseText = fmap (String.(T.pack)) $
-              reservedOp "\"" >>
+              reservedOp "\"" *>
               (many1 $ (noneOf "\""))
-              <<  reservedOp "\""
+              <*  reservedOp "\""
 
 parsePosNumber :: Parser LispVal
 parsePosNumber =  Number.(read @Integer) <$> (many digit)
 
 parseNegNumber = Number . negate . read @Integer <$> (
-                   char '-' >>
+                   char '-' *>
                    many digit)
 
 parseNumber :: Parser LispVal
@@ -72,14 +70,14 @@ parseSExp = List <$> lexParens (parseExpr `sepBy` separators)
 
 parseQuote :: Parser LispVal
 parseQuote = (\val -> List [Atom "quote", val]) <$> (
-               (reservedOp "\'") >>
+               (reservedOp "\'") *>
                parseExpr )
 
 parseReserved :: Parser LispVal
 parseReserved =
-      (reservedOp "Nil" >> return Nil)
-  <|> (reservedOp "#t"  >> return (Bool True))
-  <|> (reservedOp "#f"  >> return (Bool False))
+      (reservedOp "Nil" *> return Nil)
+  <|> (reservedOp "#t"  *> return (Bool True))
+  <|> (reservedOp "#f"  *> return (Bool False))
 
 parseExpr :: Parser LispVal
 parseExpr =
@@ -92,7 +90,7 @@ parseExpr =
 
 parseFile :: Parser a -> Parser a
 parseFile p =
-  (Tok.whiteSpace lexer) >> p << eof
+  (Tok.whiteSpace lexer) *> p <* eof
 
 readExpr :: T.Text -> Either ParseError LispVal
 readExpr = parse (parseFile parseExpr) "<stdin>"
